@@ -87,15 +87,50 @@ defmodule TestRedixTest do
       assert(Redix.command!(ctx[:conn], ["GET", "myKey"]) == "I♡HIP HOP")
       assert(Redix.command!(ctx[:conn], ["GET", "myKey2"]) == "こんにちは，世界")
       assert(Redix.command!(ctx[:conn], ["GET", "myKey3"]) == "call me stupid.")
+
+      assert(
+        Redix.command!(ctx[:conn], ["MGET", "myKey", "myKey2", "myKey3"]) == [
+          "I♡HIP HOP",
+          "こんにちは，世界",
+          "call me stupid."
+        ]
+      )
     end
 
     test "with TTL", ctx do
       assert(Redix.command!(ctx[:conn], ["SETEX", "myKey", "300", "call me stupid."]))
       assert(Redix.command!(ctx[:conn], ["GET", "myKey"]) == "call me stupid.")
       assert(Redix.command!(ctx[:conn], ["TTL", "myKey"]) == 300)
+
+      # TTL also integer is allowed
+      assert(Redix.command!(ctx[:conn], ["SETEX", "myKey2", 300, "call me stupid."]))
+      assert(Redix.command!(ctx[:conn], ["TTL", "myKey2"]) == 300)
+
+      # use MULTI
+      assert(
+        Redix.transaction_pipeline!(ctx[:conn], [
+          ["SET", "myKey3", "foo"],
+          ["EXPIRE", "myKey3", 200]
+        ]) == ["OK", 1]
+      )
+
+      assert(Redix.command!(ctx[:conn], ["TTL", "myKey3"]) == 200)
     end
   end
 
-  describe "" do
+  describe "string:integer" do
+    test "works", ctx do
+      assert(Redix.command(ctx[:conn], ["SET", "myKey", 99]) == {:ok, "OK"})
+      assert(Redix.command(ctx[:conn], ["GET", "myKey"]) == {:ok, "99"})
+
+      assert(Redix.command(ctx[:conn], ["INCR", "myKey"]) == {:ok, 100})
+      assert(Redix.command(ctx[:conn], ["GET", "myKey"]) == {:ok, "100"})
+
+      assert(Redix.command(ctx[:conn], ["DECR", "myKey"]) == {:ok, 99})
+      assert(Redix.command(ctx[:conn], ["GET", "myKey"]) == {:ok, "99"})
+
+      assert(Redix.command(ctx[:conn], ["INCRBY", "myKey", 10]) == {:ok, 109})
+      assert(Redix.command(ctx[:conn], ["DECRBY", "myKey", 10]) == {:ok, 99})
+    end
   end
 end
