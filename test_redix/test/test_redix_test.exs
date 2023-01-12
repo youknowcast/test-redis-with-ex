@@ -88,6 +88,12 @@ defmodule TestRedixTest do
       assert(Redix.command!(ctx[:conn], ["GET", "myKey2"]) == "こんにちは，世界")
       assert(Redix.command!(ctx[:conn], ["GET", "myKey3"]) == "call me stupid.")
     end
+
+    test "with TTL", ctx do
+      assert(Redix.command!(ctx[:conn], ["SETEX", "myKey", "300", "call me stupid."]))
+      assert(Redix.command!(ctx[:conn], ["GET", "myKey"]) == "call me stupid.")
+      assert(Redix.command!(ctx[:conn], ["TTL", "myKey"]) == 300)
+    end
   end
 
   describe "" do
