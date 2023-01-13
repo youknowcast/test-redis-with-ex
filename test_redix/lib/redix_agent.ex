@@ -1,4 +1,6 @@
 defmodule TestRedix.RedixAgent do
+  @moduledoc false
+
   use Agent
 
   def start_link do
@@ -8,7 +10,7 @@ defmodule TestRedix.RedixAgent do
   end
 
   def ping do
-    Redix.command!(conn, ["PING"])
+    Redix.command!(conn(), ["PING"])
   end
 
   def set(key, value, opts \\ %{}) do
@@ -28,7 +30,8 @@ defmodule TestRedix.RedixAgent do
         nil -> []
       end
 
-    Redix.command!(conn, base ++ mode ++ ttl)
+    "OK" = Redix.command!(conn(), base ++ mode ++ ttl)
+    get(key)
   end
 
   def mset(list) do
@@ -54,23 +57,21 @@ defmodule TestRedix.RedixAgent do
 
   def mget(_), do: :invalid
 
-  def increment(key, val \\ 1) when is_integer(val) do
+  def increment(key, val \\ 1) do
     cond do
-      val != 1 -> Redix.command!(conn(), ["INCRBY", key, val])
-      true -> Redix.command!(conn(), ["INCR", key])
+      is_integer(val) && val != 1 -> Redix.command!(conn(), ["INCRBY", key, val])
+      is_integer(val) -> Redix.command!(conn(), ["INCR", key])
+      true -> :invalid
     end
   end
 
-  def increment(_, _), do: :invalid
-
-  def decrement(key, val \\ 1) when is_integer(val) do
+  def decrement(key, val \\ 1) do
     cond do
-      val != 1 -> Redix.command!(conn(), ["DECRBY", key, val])
-      true -> Redix.command!(conn(), ["DECR", key])
+      is_integer(val) && val != 1 -> Redix.command!(conn(), ["DECRBY", key, val])
+      is_integer(val) -> Redix.command!(conn(), ["DECR", key])
+      true -> :invalid
     end
   end
-
-  def decrement(_, _), do: :invalid
 
   def flushdb do
     Redix.command!(conn(), ["FLUSHDB"])

@@ -38,7 +38,7 @@ defmodule TestRedixTest do
 
   describe "string:word" do
     test "works" do
-      assert(RedixAgent.set("myKey", "foo") == "OK")
+      assert(RedixAgent.set("myKey", "foo") == "foo")
       assert(RedixAgent.get("myKey") == "foo")
 
       # default Redix behavior when incr command executed with non-integer value
@@ -60,13 +60,13 @@ defmodule TestRedixTest do
     end
 
     test "multibyte code" do
-      assert(RedixAgent.set("myKey", "こんにちは，世界") == "OK")
+      assert(RedixAgent.set("myKey", "こんにちは，世界") == "こんにちは，世界")
       assert(RedixAgent.get("myKey") == "こんにちは，世界")
 
-      assert(RedixAgent.set("myKey2", "I♡HIP HOP") == "OK")
+      assert(RedixAgent.set("myKey2", "I♡HIP HOP") == "I♡HIP HOP")
       assert(RedixAgent.get("myKey2") == "I♡HIP HOP")
 
-      assert(RedixAgent.set("I♡HIP HOP", "こんにちは，世界") == "OK")
+      assert(RedixAgent.set("I♡HIP HOP", "こんにちは，世界") == "こんにちは，世界")
       assert(RedixAgent.get("I♡HIP HOP") == "こんにちは，世界")
     end
 
@@ -93,7 +93,7 @@ defmodule TestRedixTest do
     end
 
     test "with TTL" do
-      assert(RedixAgent.set(:key, "call me stupid.", %{ttl: 300}) == "OK")
+      assert(RedixAgent.set(:key, "call me stupid.", %{ttl: 300}) == "call me stupid.")
       assert(RedixAgent.get(:key) == "call me stupid.")
       assert(RedixAgent.ttl(:key) == 300)
 
@@ -111,7 +111,7 @@ defmodule TestRedixTest do
 
   describe "increment/decrement" do
     test "increment" do
-      assert(RedixAgent.set(:key, 99) == "OK")
+      assert(RedixAgent.set(:key, 99) == "99")
       assert(RedixAgent.get(:key) == "99")
 
       assert(RedixAgent.increment(:key) == 100)
@@ -122,7 +122,7 @@ defmodule TestRedixTest do
     end
 
     test "decrement" do
-      assert(RedixAgent.set(:key, 99) == "OK")
+      assert(RedixAgent.set(:key, 99) == "99")
 
       assert(RedixAgent.decrement(:key) == 98)
       assert(RedixAgent.get(:key) == "98")
@@ -132,7 +132,7 @@ defmodule TestRedixTest do
     end
 
     test "returns :invalid when not-integer value is given" do
-      assert(RedixAgent.set(:key, 99) == "OK")
+      assert(RedixAgent.set(:key, 99) == "99")
 
       assert(RedixAgent.increment(:key, "hoge") == :invalid)
       assert(RedixAgent.decrement(:key, "hoge") == :invalid)
