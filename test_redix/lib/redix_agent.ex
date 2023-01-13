@@ -1,76 +1,68 @@
 defmodule TestRedix.RedixAgent do
   @moduledoc false
 
+  use GenServer
   use Agent
 
-  def start_link do
-    {:ok, conn} = Redix.start_link(host: "127.0.0.1", port: 26379)
+  alias TestRedix.RedixAgent.StringCommand
 
-    Agent.start_link(fn -> [conn: conn] end, name: __MODULE__)
+  @agent String.to_atom("#{__MODULE__}:redis_agent")
+
+  def start_link do
+    IO.puts @agent
+    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
+  end
+
+  def set(key, value, opts \\ %{}) do
+    GenServer.call(__MODULE__, {:string, :set, %{key: key, value: value, opts: opts}})
+  end
+
+  def get(key) do 
+    GenServer.call(__MODULE__, {:string, :get, %{key: key}})
+  end
+
+  def mset(list) do
+    GenServer.call(__MODULE__, {:string, :mset, %{list: list}})
+  end
+
+  def mget(list) do
+    GenServer.call(__MODULE__, {:string, :mget, %{list: list}})
+  end
+
+  def increment(key, val \\ 1) do
+    GenServer.call(__MODULE__, {:string, :increment, %{key: key, val: val}})
+  end
+
+  def decrement(key, val \\ 1) do
+    GenServer.call(__MODULE__, {:string, :decrement, %{key: key, val: val}})
+  end
+
+  def init(config) do
+    {:ok, conn} = Redix.start_link(host: "127.0.0.1", port: 26379)
+    
+    Agent.start_link(fn -> [conn: conn] end, name: @agent)
+
+    {:ok, config}
+  end
+
+  def handle_call({:string, command, args}, _, state) do
+    value = case command do
+      :set -> StringCommand.set(conn(), args[:key], args[:value], args[:opts])
+      :get -> StringCommand.get(conn(), args[:key])
+      :mset -> StringCommand.mset(conn(), args)
+      :mget -> StringCommand.mget(conn(), args)
+      :increment -> StringCommand.increment(conn(), args[:key], args[:val])
+      :decrement -> StringCommand.decrement(conn(), args[:key], args[:val])
+    end
+    {:reply, value, state}
   end
 
   def ping do
     Redix.command!(conn(), ["PING"])
   end
 
-  def set(key, value, opts \\ %{}) do
-    base = ["SET", key, value]
-
-    ttl =
-      if opts[:ttl] do
-        ["EX", opts[:ttl]]
-      else
-        []
-      end
-
-    mode =
-      case opts[:mode] do
-        :create_only -> ["NX"]
-        :update_only -> ["XX"]
-        nil -> []
-      end
-
-    "OK" = Redix.command!(conn(), base ++ mode ++ ttl)
-    get(key)
-  end
-
-  def mset(list) do
-    args =
-      list
-      |> Enum.map(&Tuple.to_list(&1))
-      |> List.flatten()
-
-    Redix.command!(conn(), ["MSET" | args])
-  end
-
-  def get(key) do
-    Redix.command!(conn(), ["GET", key])
-  end
-
   def ttl(key) do
     Redix.command!(conn(), ["TTL", key])
-  end
-
-  def mget(list) when is_list(list) do
-    Redix.command!(conn(), ["MGET" | list])
-  end
-
-  def mget(_), do: :invalid
-
-  def increment(key, val \\ 1) do
-    cond do
-      is_integer(val) && val != 1 -> Redix.command!(conn(), ["INCRBY", key, val])
-      is_integer(val) -> Redix.command!(conn(), ["INCR", key])
-      true -> :invalid
-    end
-  end
-
-  def decrement(key, val \\ 1) do
-    cond do
-      is_integer(val) && val != 1 -> Redix.command!(conn(), ["DECRBY", key, val])
-      is_integer(val) -> Redix.command!(conn(), ["DECR", key])
-      true -> :invalid
-    end
   end
 
   def flushdb do
@@ -78,6 +70,6 @@ defmodule TestRedix.RedixAgent do
   end
 
   def conn do
-    Agent.get(__MODULE__, fn config -> config[:conn] end)
+    Agent.get(@agent, fn config -> config[:conn] end)
   end
 end
