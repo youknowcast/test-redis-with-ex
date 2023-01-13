@@ -9,7 +9,6 @@ defmodule TestRedix.RedixAgent do
   @agent String.to_atom("#{__MODULE__}:redis_agent")
 
   def start_link do
-    IO.puts @agent
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
@@ -17,7 +16,7 @@ defmodule TestRedix.RedixAgent do
     GenServer.call(__MODULE__, {:string, :set, %{key: key, value: value, opts: opts}})
   end
 
-  def get(key) do 
+  def get(key) do
     GenServer.call(__MODULE__, {:string, :get, %{key: key}})
   end
 
@@ -37,26 +36,6 @@ defmodule TestRedix.RedixAgent do
     GenServer.call(__MODULE__, {:string, :decrement, %{key: key, val: val}})
   end
 
-  def init(config) do
-    {:ok, conn} = Redix.start_link(host: "127.0.0.1", port: 26379)
-    
-    Agent.start_link(fn -> [conn: conn] end, name: @agent)
-
-    {:ok, config}
-  end
-
-  def handle_call({:string, command, args}, _, state) do
-    value = case command do
-      :set -> StringCommand.set(conn(), args[:key], args[:value], args[:opts])
-      :get -> StringCommand.get(conn(), args[:key])
-      :mset -> StringCommand.mset(conn(), args)
-      :mget -> StringCommand.mget(conn(), args)
-      :increment -> StringCommand.increment(conn(), args[:key], args[:val])
-      :decrement -> StringCommand.decrement(conn(), args[:key], args[:val])
-    end
-    {:reply, value, state}
-  end
-
   def ping do
     Redix.command!(conn(), ["PING"])
   end
@@ -71,5 +50,27 @@ defmodule TestRedix.RedixAgent do
 
   def conn do
     Agent.get(@agent, fn config -> config[:conn] end)
+  end
+
+  def init(config) do
+    {:ok, conn} = Redix.start_link(host: "127.0.0.1", port: 26379)
+
+    Agent.start_link(fn -> [conn: conn] end, name: @agent)
+
+    {:ok, config}
+  end
+
+  def handle_call({:string, command, args}, _, state) do
+    value =
+      case command do
+        :set -> StringCommand.set(conn(), args[:key], args[:value], args[:opts])
+        :get -> StringCommand.get(conn(), args[:key])
+        :mset -> StringCommand.mset(conn(), args)
+        :mget -> StringCommand.mget(conn(), args)
+        :increment -> StringCommand.increment(conn(), args[:key], args[:val])
+        :decrement -> StringCommand.decrement(conn(), args[:key], args[:val])
+      end
+
+    {:reply, value, state}
   end
 end
