@@ -4,14 +4,14 @@ defmodule TestRedixTest do
 
   alias TestRedix.RedixAgent
 
-  setup_all do
+  setup do
     RedixAgent.start_link()
 
     {:ok, %{}}
   end
 
   describe "connect to invalid server" do
-    test "returns error" do
+    test "returns error(default Redix behavior)" do
       {:ok, conn} = Redix.start_link(host: "invalid", port: 6379)
 
       assert(
