@@ -5,6 +5,15 @@ services:
     image: redis:7.0.7-bullseye
     ports:
       - "26379:6379"
+  redis_cluster_bridged:
+    image: redis:7.0.7-bullseye
+    volumes:
+      - $PWD/redis.conf:/data/redis.conf
+    command: redis-server /data/redis.conf
+    ports:
+      - "36379:6379"
+    networks:
+      - cluster_network
   redis_cluster:
     image: redis:7.0.7-bullseye
     volumes:

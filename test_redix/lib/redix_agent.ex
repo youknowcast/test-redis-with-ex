@@ -8,8 +8,8 @@ defmodule TestRedix.RedixAgent do
 
   @agent String.to_atom("#{__MODULE__}:redis_agent")
 
-  def start_link do
-    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
+  def start_link(host \\ "127.0.0.1", port \\ 6379) do
+    GenServer.start_link(__MODULE__, %{host: host, port: port}, name: __MODULE__)
   end
 
   def set(key, value, opts \\ %{}) do
@@ -53,9 +53,9 @@ defmodule TestRedix.RedixAgent do
   end
 
   def init(config) do
-    {:ok, conn} = Redix.start_link(host: "127.0.0.1", port: 26379)
+    {:ok, conn} = Redix.start_link(host: config.host, port: config.port)
 
-    Agent.start_link(fn -> [conn: conn] end, name: @agent)
+    Agent.start_link(fn -> [conn: conn, host: config.host, port: config.port] end, name: @agent)
 
     {:ok, config}
   end
